@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Calendar,
+  CalendarCheck,
 } from 'lucide-react';
 
 // Interfaces
@@ -53,6 +54,7 @@ const toolsSection: SidebarSection = {
     { id: 'linkedin-generator', label: 'Outreach Messages', icon: <MessageCircle className="w-5 h-5" />, path: '/linkedin-generator' },
     { id: 'gaming', label: 'Gaming Aptitude', icon: <Gamepad2 className="w-5 h-5" />, path: '/gaming' },
     { id: 'session', label: 'Resume Session', icon: <Calendar className="w-5 h-5" />, path: '/session' },
+    { id: 'my-bookings', label: 'My Bookings', icon: <CalendarCheck className="w-5 h-5" />, path: '/my-bookings' },
   ],
 };
 

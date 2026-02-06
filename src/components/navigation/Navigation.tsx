@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   Sparkles,
   Gamepad2,
+  CalendarCheck,
 } from "lucide-react";
 
 import { useAuth } from "../../contexts/AuthContext";
@@ -84,6 +85,11 @@ export const Navigation: React.FC<NavigationProps> = ({ onPageChange }) => {
             id: "/jobs/applications",
             label: "My Applications",
             icon: <FileText className="w-4 h-4" />,
+          },
+          {
+            id: "/my-bookings",
+            label: "My Bookings",
+            icon: <CalendarCheck className="w-4 h-4" />,
           },
         ]
       : []),
