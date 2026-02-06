@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { sessionBookingService } from '../../services/sessionBookingService';
 import { webinarService } from '../../services/webinarService';
+import { supabase } from '../../lib/supabaseClient';
 import type { SessionBooking, BookingStatus } from '../../types/session';
 import type { WebinarRegistrationWithDetails } from '../../types/webinar';
 
@@ -112,8 +113,26 @@ export const MyBookingsPage: React.FC = () => {
 
   const handleCancel = async (bookingId: string) => {
     setCancellingId(bookingId);
+    const booking = bookings.find((b) => b.id === bookingId);
     const result = await sessionBookingService.cancelBooking(bookingId);
     if (result.success) {
+      if (booking && user) {
+        try {
+          await supabase.functions.invoke('send-session-cancellation-email', {
+            body: {
+              bookingId: booking.id,
+              recipientEmail: user.email,
+              recipientName: user.name,
+              serviceTitle: booking.session_services?.title || 'Resume Session',
+              bookingDate: formatDate(booking.booking_date),
+              slotLabel: sessionBookingService.getSlotLabel(booking.time_slot),
+              bookingCode: booking.booking_code,
+            },
+          });
+        } catch (emailErr) {
+          console.error('Failed to send cancellation email:', emailErr);
+        }
+      }
       await loadBookings();
     }
     setCancellingId(null);

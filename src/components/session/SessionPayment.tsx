@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { sessionBookingService } from '../../services/sessionBookingService';
 import { RAZORPAY_CONFIG } from '../../utils/razorpayConfig';
+import { supabase } from '../../lib/supabaseClient';
 import type { SessionService, BookingResult } from '../../types/session';
 
 interface SessionPaymentProps {
@@ -101,6 +102,22 @@ export const SessionPayment: React.FC<SessionPaymentProps> = ({
           setProcessing(false);
 
           if (result.success) {
+            try {
+              await supabase.functions.invoke('send-session-booking-email', {
+                body: {
+                  bookingId: result.booking_id || '',
+                  recipientEmail: user.email,
+                  recipientName: user.name,
+                  serviceTitle: service.title,
+                  bookingDate: formatDate(selectedDate),
+                  slotLabel,
+                  bookingCode: result.booking_code || '',
+                  bonusCredits: result.bonus_credits || 0,
+                },
+              });
+            } catch (emailErr) {
+              console.error('Failed to send booking confirmation email:', emailErr);
+            }
             onSuccess(result);
           } else if (
             result.error?.includes('no longer available') ||
