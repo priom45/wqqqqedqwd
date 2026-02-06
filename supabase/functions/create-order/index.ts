@@ -15,13 +15,14 @@ interface OrderRequest {
   addOnsTotal?: number;
   amount: number;
   selectedAddOns?: { [key: string]: number };
-  // Added: allow client to request test mode explicitly
   testMode?: boolean;
   metadata?: {
-    type?: 'webinar' | 'subscription';
+    type?: 'webinar' | 'subscription' | 'session_booking';
     webinarId?: string;
     registrationId?: string;
     webinarTitle?: string;
+    serviceId?: string;
+    serviceTitle?: string;
   };
   userId?: string;
   currency?: string;
@@ -241,15 +242,52 @@ serve(async (req) => {
       throw new Error('Invalid user token');
     }
 
-    // Handle webinar payment flow
     const isWebinarPayment = metadata?.type === 'webinar';
+    const isSessionBooking = metadata?.type === 'session_booking';
 
     let originalPrice = 0; // in paise
     let finalAmount = 0;   // in paise
     let discountAmount = 0; // in paise
     let appliedCoupon: string | null = null;
 
-    if (isWebinarPayment) {
+    if (isSessionBooking) {
+      console.log(`[${new Date().toISOString()}] - Processing session booking payment`);
+
+      if (!metadata?.serviceId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing service ID for session booking' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
+
+      const { data: serviceRow, error: serviceErr } = await supabase
+        .from('session_services')
+        .select('price, title')
+        .eq('id', metadata.serviceId)
+        .single();
+
+      if (serviceErr || !serviceRow) {
+        console.error(`[${new Date().toISOString()}] - Unable to fetch session service:`, serviceErr);
+        return new Response(
+          JSON.stringify({ error: 'Unable to fetch session service pricing' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
+
+      originalPrice = Number(serviceRow.price || 0);
+      if (!originalPrice || originalPrice <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid session service price' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
+
+      finalAmount = originalPrice;
+
+      if (frontendCalculatedAmount && frontendCalculatedAmount !== finalAmount) {
+        console.log(`[${new Date().toISOString()}] - Frontend amount (${frontendCalculatedAmount}) differs from server amount (${finalAmount}). Using server amount.`);
+      }
+    } else if (isWebinarPayment) {
       console.log(`[${new Date().toISOString()}] - Processing webinar payment`);
 
       if (!metadata?.webinarId || !metadata?.registrationId) {
@@ -313,9 +351,27 @@ serve(async (req) => {
       }
     }
 
-    // Get plan details
     let plan: PlanConfig;
-    if (isWebinarPayment) {
+    if (isSessionBooking) {
+      plan = {
+        id: 'session_booking',
+        name: metadata?.serviceTitle || 'Session Booking',
+        price: originalPrice / 100,
+        mrp: originalPrice / 100,
+        discountPercentage: 0,
+        duration: 'One-time Purchase',
+        optimizations: 0,
+        scoreChecks: 0,
+        linkedinMessages: 0,
+        guidedBuilds: 0,
+        durationInHours: 0,
+        tag: '',
+        tagColor: '',
+        gradient: '',
+        icon: '',
+        features: [],
+      };
+    } else if (isWebinarPayment) {
       plan = {
         id: 'webinar_payment',
         name: metadata?.webinarTitle || 'Webinar Registration',
@@ -362,15 +418,14 @@ serve(async (req) => {
       plan = foundPlan;
     }
 
-    if (!isWebinarPayment) {
+    if (!isWebinarPayment && !isSessionBooking) {
       originalPrice = (plan?.price || 0) * 100;
       discountAmount = 0;
       finalAmount = originalPrice;
       appliedCoupon = null;
     }
 
-    // Coupon processing
-    if (couponCode && !isWebinarPayment) {
+    if (couponCode && !isWebinarPayment && !isSessionBooking) {
       const normalizedCoupon = couponCode.toLowerCase().trim();
 
       const { count: userCouponUsageCount, error: userCouponUsageError } = await supabase
@@ -458,15 +513,15 @@ serve(async (req) => {
       }
     }
 
-    if (!isWebinarPayment && walletDeduction && walletDeduction > 0) {
+    if (!isWebinarPayment && !isSessionBooking && walletDeduction && walletDeduction > 0) {
       finalAmount = Math.max(0, finalAmount - walletDeduction);
     }
 
-    if (addOnsTotal && addOnsTotal > 0) {
+    if (!isSessionBooking && addOnsTotal && addOnsTotal > 0) {
       finalAmount += addOnsTotal;
     }
 
-    if (!isWebinarPayment) {
+    if (!isWebinarPayment && !isSessionBooking) {
       if (finalAmount !== frontendCalculatedAmount) {
         console.error(`[${new Date().toISOString()}] - Price mismatch detected! Backend calculated: ${finalAmount}, Frontend sent: ${frontendCalculatedAmount}`);
         return new Response(
@@ -490,9 +545,17 @@ serve(async (req) => {
     console.log(`[${new Date().toISOString()}] - Creating pending payment_transactions record.`);
 
     // Build base insert payload
+    const getPurchaseType = () => {
+      if (isSessionBooking) return 'session_booking';
+      if (isWebinarPayment) return 'webinar';
+      if (planId === 'addon_only_purchase') return 'addon_only';
+      if (Object.keys(selectedAddOns || {}).length > 0) return 'plan_with_addons';
+      return 'plan';
+    };
+
     const baseInsert: any = {
       user_id: user.id,
-      plan_id: (isWebinarPayment || planId === 'addon_only_purchase') ? null : planId,
+      plan_id: (isWebinarPayment || isSessionBooking || planId === 'addon_only_purchase') ? null : planId,
       status: 'pending',
       amount: plan.price * 100,
       currency: 'INR',
@@ -501,11 +564,7 @@ serve(async (req) => {
       coupon_code: appliedCoupon,
       discount_amount: discountAmount,
       final_amount: finalAmount,
-      purchase_type: isWebinarPayment
-        ? 'webinar'
-        : (planId === 'addon_only_purchase'
-            ? 'addon_only'
-            : (Object.keys(selectedAddOns || {}).length > 0 ? 'plan_with_addons' : 'plan')),
+      purchase_type: getPurchaseType(),
     };
 
     if (isWebinarPayment && metadata) {
@@ -514,6 +573,14 @@ serve(async (req) => {
         webinarId: metadata.webinarId,
         registrationId: metadata.registrationId,
         webinarTitle: metadata.webinarTitle,
+      };
+    }
+
+    if (isSessionBooking && metadata) {
+      baseInsert.metadata = {
+        type: 'session_booking',
+        serviceId: metadata.serviceId,
+        serviceTitle: metadata.serviceTitle,
       };
     }
 

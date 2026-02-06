@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { sessionBookingService } from '../../services/sessionBookingService';
-import { RAZORPAY_CONFIG } from '../../utils/razorpayConfig';
 import { supabase } from '../../lib/supabaseClient';
 import type { SessionService, BookingResult } from '../../types/session';
 
@@ -56,29 +55,56 @@ export const SessionPayment: React.FC<SessionPaymentProps> = ({
     setError(null);
 
     try {
-      const transactionId = await sessionBookingService.createPaymentTransaction(
-        user.id,
-        service.id,
-        service.price
-      );
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
-      if (!transactionId) {
-        setError('Failed to initialize payment. Please try again.');
+      if (!accessToken) {
+        setError('Session expired. Please log in again.');
         setProcessing(false);
         return;
       }
 
+      const orderResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-order`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            amount: service.price,
+            metadata: {
+              type: 'session_booking',
+              serviceId: service.id,
+              serviceTitle: service.title,
+            },
+          }),
+        }
+      );
+
+      const orderResult = await orderResponse.json();
+
+      if (!orderResponse.ok) {
+        setError(orderResult.error || 'Failed to create payment order.');
+        setProcessing(false);
+        return;
+      }
+
+      const { orderId, keyId, transactionId, amount: serverAmount } = orderResult;
+
       const options = {
-        key: RAZORPAY_CONFIG.KEY_ID,
-        amount: service.price,
+        key: keyId,
+        amount: serverAmount,
         currency: 'INR',
         name: 'PrimoBoost AI',
         description: service.title,
+        order_id: orderId,
         handler: async (response: any) => {
           const updated = await sessionBookingService.updatePaymentTransaction(
             transactionId,
             response.razorpay_payment_id,
-            response.razorpay_order_id || '',
+            response.razorpay_order_id || orderId,
             'success'
           );
 
@@ -133,7 +159,7 @@ export const SessionPayment: React.FC<SessionPaymentProps> = ({
           email: user.email,
         },
         theme: {
-          color: RAZORPAY_CONFIG.THEME_COLOR,
+          color: '#2563eb',
         },
         modal: {
           ondismiss: () => {
