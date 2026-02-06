@@ -102,6 +102,7 @@ export const Navigation: React.FC<NavigationProps> = ({ onPageChange }) => {
     { id: "/admin/blog", label: "Blog Management", icon: <FileText className="w-4 h-4" /> },
     { id: "/admin/email-testing", label: "Email Testing", icon: <Mail className="w-4 h-4" /> },
     { id: "/admin/users", label: "Manage Users", icon: <Users className="w-4 h-4" /> },
+    { id: "/admin/sessions", label: "Session Schedule", icon: <Sparkles className="w-4 h-4" /> },
   ];
 
   const isAdmin = isAuthenticated && (user?.role === "admin" || user?.email === "primoboostai@gmail.com");
