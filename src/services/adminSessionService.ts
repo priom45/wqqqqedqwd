@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
-import type { SessionBooking } from '../types/session';
+import type { SessionBooking, SessionService } from '../types/session';
 
 interface AdminSlotView {
   id: string;
@@ -150,6 +150,47 @@ class AdminSessionService {
       cancelled,
       total_revenue,
     };
+  }
+
+  async getServiceForEditing(serviceId: string): Promise<SessionService | null> {
+    const { data, error } = await supabase
+      .from('session_services')
+      .select('*')
+      .eq('id', serviceId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      currency: data.currency,
+      highlights: data.highlights as string[],
+      bonus_credits: data.bonus_credits,
+      max_slots_per_day: data.max_slots_per_day,
+      time_slots: data.time_slots as string[],
+      is_active: data.is_active,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+  }
+
+  async updateService(
+    serviceId: string,
+    updates: Partial<Pick<SessionService, 'title' | 'description' | 'price' | 'highlights' | 'bonus_credits' | 'max_slots_per_day' | 'time_slots' | 'is_active'>>
+  ): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase
+      .from('session_services')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   }
 
   async exportBookingsCSV(startDate: string, endDate: string): Promise<string> {

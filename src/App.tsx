@@ -70,6 +70,7 @@ import { SessionLandingPage } from './components/session/SessionLandingPage';
 import { SessionBookingFlow } from './components/session/SessionBookingFlow';
 import { MyBookingsPage } from './components/pages/MyBookingsPage';
 import { AdminSessionSchedule } from './components/admin/AdminSessionSchedule';
+import { AdminSessionServiceEditor } from './components/admin/AdminSessionServiceEditor';
 
 function App() {
   const { isAuthenticated, user, markProfilePromptSeen, isLoading } = useAuth();
@@ -553,8 +554,9 @@ const handleDiwaliCTAClick = useCallback(() => {
             element={
               <AdminRoute>
                 <div className="min-h-screen pb-20 md:pl-16">
-                  <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
-                    <h1 className="text-2xl font-bold text-white mb-6">Session Schedule Management</h1>
+                  <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+                    <h1 className="text-2xl font-bold text-white">Session Schedule Management</h1>
+                    <AdminSessionServiceEditor />
                     <AdminSessionSchedule />
                   </div>
                 </div>
