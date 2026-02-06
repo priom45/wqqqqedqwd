@@ -1,6 +1,6 @@
 // src/App.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, X, Home, Info, BookOpen, Phone, FileText, LogIn, LogOut, User, Wallet, Briefcase, Crown, Sparkles, Gamepad2, Mail, Brain } from 'lucide-react';
+import { Menu, X, Home, Info, BookOpen, Phone, FileText, LogIn, LogOut, User, Wallet, Briefcase, Crown, Sparkles, Gamepad2, Mail, Brain, Calendar } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header';
 import { Navigation } from './components/navigation/Navigation';
@@ -66,6 +66,10 @@ import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
 import { SnowEffect, SantaSleigh } from './components/ui/ChristmasTheme';
 import { PageSidebar } from './components/navigation/PageSidebar';
 import { TestEmailDigest } from './pages/TestEmailDigest';
+import { SessionLandingPage } from './components/session/SessionLandingPage';
+import { SessionBookingFlow } from './components/session/SessionBookingFlow';
+import { MyBookingsPage } from './components/pages/MyBookingsPage';
+import { AdminSessionSchedule } from './components/admin/AdminSessionSchedule';
 
 function App() {
   const { isAuthenticated, user, markProfilePromptSeen, isLoading } = useAuth();
@@ -541,6 +545,22 @@ const handleDiwaliCTAClick = useCallback(() => {
           <Route path="/spatial-reasoning" element={<SpatialReasoningDemoPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/test-email-digest" element={<TestEmailDigest />} />
+          <Route path="/session" element={<SessionLandingPage onShowAuth={handleShowAuth} />} />
+          <Route path="/session/book" element={<SessionBookingFlow />} />
+          <Route path="/my-bookings" element={<MyBookingsPage />} />
+          <Route
+            path="/admin/sessions"
+            element={
+              <AdminRoute>
+                <div className="min-h-screen pb-20 md:pl-16">
+                  <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
+                    <h1 className="text-2xl font-bold text-white mb-6">Session Schedule Management</h1>
+                    <AdminSessionSchedule />
+                  </div>
+                </div>
+              </AdminRoute>
+            }
+          />
           <Route
             path="/admin/jobs"
             element={
@@ -665,11 +685,14 @@ const handleDiwaliCTAClick = useCallback(() => {
                       ...(isAuthenticated ? [{ id: '/my-webinars', label: 'My Webinars', icon: <Sparkles className="w-5 h-5" /> }] : []),
              { id: '/gaming', label: 'Gaming', icon: <Gamepad2 className="w-5 h-5" /> },
                       { id: '/spatial-reasoning', label: 'Spatial Reasoning', icon: <Brain className="w-5 h-5" /> },
+                      { id: '/session', label: 'Resume Session', icon: <Sparkles className="w-5 h-5" /> },
+                      ...(isAuthenticated ? [{ id: '/my-bookings', label: 'My Bookings', icon: <BookOpen className="w-5 h-5" /> }] : []),
                       { id: '/careers', label: 'Careers', icon: <Briefcase className="w-5 h-5" /> },
                       { id: '/jobs', label: 'Latest Jobs', icon: <Briefcase className="w-5 h-5" /> },
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/jobs', label: 'Admin Panel', icon: <Crown className="w-5 h-5" /> }] : []),
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/blog', label: 'Blog Management', icon: <FileText className="w-5 h-5" /> }] : []),
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/email-testing', label: 'Email Testing', icon: <Mail className="w-5 h-5" /> }] : []),
+                    ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/sessions', label: 'Session Schedule', icon: <Calendar className="w-5 h-5" /> }] : []),
 { id: '/tutorials', label: 'Tutorials', icon: <BookOpen className="w-5 h-5" /> },
 { id: '/contact', label: 'Contact', icon: <Phone className="w-5 h-5" /> },
 
