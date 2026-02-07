@@ -15,6 +15,8 @@ export interface Webinar {
   description: string;
   short_description?: string;
   thumbnail_url?: string;
+  banner_url?: string;
+  banner_alt_text?: string;
   scheduled_at: string;
   duration_minutes: number;
   meet_link: string;
@@ -142,6 +144,8 @@ export interface CreateWebinarData {
   description: string;
   short_description?: string;
   thumbnail_url?: string;
+  banner_url?: string;
+  banner_alt_text?: string;
   scheduled_at: string;
   duration_minutes: number;
   meet_link: string;

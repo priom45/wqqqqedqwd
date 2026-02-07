@@ -1,6 +1,6 @@
 // src/App.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, X, Home, Info, BookOpen, Phone, FileText, LogIn, LogOut, User, Wallet, Briefcase, Crown, Sparkles, Gamepad2, Mail, Brain, Calendar } from 'lucide-react';
+import { Menu, X, Home, Info, BookOpen, Phone, FileText, LogIn, LogOut, User, Wallet, Briefcase, Crown, Sparkles, Gamepad2, Mail, Brain, Calendar, Video } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header';
 import { Navigation } from './components/navigation/Navigation';
@@ -71,6 +71,7 @@ import { SessionBookingFlow } from './components/session/SessionBookingFlow';
 import { MyBookingsPage } from './components/pages/MyBookingsPage';
 import { AdminSessionSchedule } from './components/admin/AdminSessionSchedule';
 import { AdminSessionServiceEditor } from './components/admin/AdminSessionServiceEditor';
+import { AdminWebinarsPage } from './components/admin/AdminWebinarsPage';
 
 function App() {
   const { isAuthenticated, user, markProfilePromptSeen, isLoading } = useAuth();
@@ -640,6 +641,14 @@ const handleDiwaliCTAClick = useCallback(() => {
             }
           />
           <Route
+            path="/admin/webinars"
+            element={
+              <AdminRoute>
+                <AdminWebinarsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
             path="/admin/dashboard"
             element={
               <AdminRoute>
@@ -692,6 +701,7 @@ const handleDiwaliCTAClick = useCallback(() => {
                       { id: '/careers', label: 'Careers', icon: <Briefcase className="w-5 h-5" /> },
                       { id: '/jobs', label: 'Latest Jobs', icon: <Briefcase className="w-5 h-5" /> },
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/jobs', label: 'Admin Panel', icon: <Crown className="w-5 h-5" /> }] : []),
+                    ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/webinars', label: 'Webinar Management', icon: <Video className="w-5 h-5" /> }] : []),
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/blog', label: 'Blog Management', icon: <FileText className="w-5 h-5" /> }] : []),
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/email-testing', label: 'Email Testing', icon: <Mail className="w-5 h-5" /> }] : []),
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/sessions', label: 'Session Schedule', icon: <Calendar className="w-5 h-5" /> }] : []),
